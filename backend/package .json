@@ -4,7 +4,7 @@
   "description": "AUREX Crypto Exchange Backend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node backend/server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
