@@ -16,15 +16,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'aurex_secret_2024';
 // --- РЕГИСТРАЦИЯ ---
 app.post('/api/register', async (req, res) => {
     const { email, phone, password } = req.body;
-    
-    // Проверка: есть ли уже такой пользователь
     const { data: existing } = await supabase.from('users').select('email').eq('email', email).maybeSingle();
     if (existing) return res.status(400).json({ error: 'Эта почта уже зарегистрирована' });
 
-    // Сохраняем в базу (пароль в открытом виде для демо)
     const { error } = await supabase.from('users').insert({ email, phone, password, balance: 0, btc_balance: 0 });
     if (error) return res.status(400).json({ error: error.message });
-    
     res.json({ success: true });
 });
 
@@ -38,14 +34,14 @@ app.post('/api/login', async (req, res) => {
     res.json({ token, user: { email: user.email, balance: user.balance, is_admin: user.is_admin } });
 });
 
-// --- ПОЛУЧИТЬ ДАННЫЕ ---
+// --- ПОЛУЧИТЬ ДАННЫЕ (ВАЖНО ДЛЯ АДМИНКИ) ---
 app.get('/api/me', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'Нет токена' });
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         const { data: user } = await supabase.from('users').select('*').eq('email', decoded.email).single();
-        res.json(user);
+        res.json(user); // Здесь возвращается ВСЯ информация, включая is_admin
     } catch (e) { res.status(401).json({ error: 'Ошибка' }); }
 });
 
@@ -148,6 +144,12 @@ app.post('/api/support', async (req, res) => {
         await supabase.from('support_tickets').insert({ email: decoded.email, message: req.body.message, status: 'open' });
         res.json({ success: true });
     } catch (e) { res.status(401).json({ error: 'Ошибка' }); }
+});
+
+// --- АДМИН: ВСЕ ПОЛЬЗОВАТЕЛИ ---
+app.get('/api/admin/users', async (req, res) => {
+    const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    res.json(data || []);
 });
 
 const PORT = process.env.PORT || 3000;
